@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scanner IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Animación de pulso para el scanner */
+        @keyframes scan {
+            0% { transform: translateY(0); opacity: 0.5; }
+            50% { transform: translateY(200px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 0; }
+        }
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: #3B82F6;
+            box-shadow: 0 0 10px #3B82F6;
+            position: absolute;
+            animation: scan 2s infinite linear;
+            display: none;
+        }
+        .scanning .scan-line { display: block; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col relative overflow-hidden">
+
+    <div class="pt-8 pb-4 px-6 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Gastos IA</h1>
+            <p class="text-slate-400 text-sm">Scanner Inteligente</p>
+        </div>
+        <div class="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+            <span class="text-xs font-bold text-blue-400">MP</span>
+        </div>
+    </div>
+
+    <div class="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
+        
+        <div id="startScreen" class="flex flex-col items-center w-full transition-all duration-500">
+            
+            <button onclick="triggerCamera()" class="group relative w-48 h-48 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center shadow-2xl active:scale-95 transition-transform duration-200">
+                <div class="absolute inset-0 rounded-full bg-blue-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 text-blue-400 group-hover:text-blue-300 transition-colors">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.122 2.122 0 00-1.791-.98h-6.25a2.122 2.122 0 00-1.79.98L6.827 6.175z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                </svg>
+            </button>
+            
+            <p class="mt-8 text-slate-400 font-medium text-center">Tocá para escanear ticket</p>
+            
+            <button onclick="triggerGallery()" class="mt-4 text-sm text-slate-500 underline hover:text-slate-300">
+                o subir de la galería
+            </button>
+        </div>
+
+        <div id="loadingScreen" class="hidden w-full max-w-xs text-center scanning">
+            <div class="relative w-full h-64 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6 flex items-center justify-center">
+                <div class="scan-line top-0"></div>
+                <img id="previewImg" class="w-full h-full object-cover opacity-50" />
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Analizando...</h2>
+            <p id="loadingText" class="text-blue-400 text-sm font-mono">Comprimiendo imagen...</p>
+        </div>
+
+        <div id="resultScreen" class="hidden w-full max-w-sm">
+            <div class="bg-white text-slate-900 rounded-xl shadow-2xl overflow-hidden relative">
+                <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+                    <span class="font-bold text-lg">✅ Éxito</span>
+                    <span class="text-blue-200 text-xs uppercase tracking-wider">Ticket Procesado</span>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div class="flex justify-between border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-sm">Comercio</span>
+                        <span id="resComercio" class="font-bold text-gray-800 text-right w-1/2 break-words">...</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-sm">Fecha</span>
+                        <span id="resFecha" class="font-mono text-gray-800">...</span>
+                    </div>
+                    <div class="flex justify-between border-b border-gray-100 pb-2">
+                        <span class="text-gray-500 text-sm">CUIT</span>
+                        <span id="resCuit" class="font-mono text-gray-800 text-xs">...</span>
+                    </div>
+                    
+                    <div class="pt-2 flex justify-between items-end">
+                        <span class="text-gray-500 font-medium">Total</span>
+                        <span id="resMonto" class="text-3xl font-bold text-green-600">...</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-4 flex gap-3">
+                    <button onclick="resetApp()" class="flex-1 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-100 transition shadow-sm">
+                        Escanear Otro
+                    </button>
+                    <button class="flex-1 bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-black transition shadow-sm flex justify-center items-center gap-2">
+                       <span>Guardado</span>
+                       <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMsg" class="hidden mt-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg text-sm text-center max-w-sm">
+        </div>
+
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(this)">
+    <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="handleFileSelect(this)">
+
+    <script>
+        // --- CONFIGURACIÓN ---
+        const SUPABASE_URL = 'https://thfrcokohzbkcwdsryss.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoZnJjb2tvaHpia2N3ZHNyeXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4ODc2OTIsImV4cCI6MjA4NTQ2MzY5Mn0.PzudghLp2lTdvFwX1y_Q4r8U_gA4hE7k040LYr-WVx8'; 
+        const USER_ID = "76e024c1-bd8f-4c0e-bfa0-132df6bd8e91"; 
+        
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- DOM ELEMENTS ---
+        const startScreen = document.getElementById('startScreen');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const errorMsg = document.getElementById('errorMsg');
+        const loadingText = document.getElementById('loadingText');
+        const previewImg = document.getElementById('previewImg');
+
+        // --- FUNCIONES UI ---
+        function triggerCamera() {
+            document.getElementById('cameraInput').click();
+        }
+
+        function triggerGallery() {
+            document.getElementById('galleryInput').click();
+        }
+
+        function showLoading(file) {
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            
+            // Mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) { previewImg.src = e.target.result; }
+            reader.readAsDataURL(file);
+        }
+
+        function showResult(ticket) {
+            loadingScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            // Formatear datos
+            document.getElementById('resComercio').innerText = ticket.comercio || "Desconocido";
+            document.getElementById('resFecha').innerText = ticket.fecha_emision || "N/A";
+            document.getElementById('resCuit').innerText = ticket.cuit || "-";
+            
+            const monto = ticket.monto_total ? ticket.monto_total.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : "$0.00";
+            document.getElementById('resMonto').innerText = monto;
+        }
+
+        function showError(msg) {
+            loadingScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            errorMsg.innerText = msg;
+            errorMsg.classList.remove('hidden');
+        }
+
+        function resetApp() {
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            document.getElementById('cameraInput').value = ""; // Reset inputs
+            document.getElementById('galleryInput').value = "";
+        }
+
+        // --- LÓGICA PRINCIPAL ---
+        async function handleFileSelect(input) {
+            if (input.files.length === 0) return;
+            
+            const originalFile = input.files[0];
+            showLoading(originalFile);
+
+            try {
+                // 1. COMPRIMIR
+                loadingText.innerText = "Optimizando foto...";
+                const compressedFile = await comprimirImagen(originalFile);
+
+                // 2. SUBIR
+                loadingText.innerText = "Subiendo a la nube...";
+                const fileName = `scan_${Date.now()}.jpg`;
+                const { error: uploadError } = await _supabase.storage
+                    .from('comprobantes')
+                    .upload(fileName, compressedFile);
+
+                if (uploadError) throw new Error("Error de subida: " + uploadError.message);
+
+                const { data: { publicUrl } } = _supabase.storage
+                    .from('comprobantes')
+                    .getPublicUrl(fileName);
+
+                // 3. PROCESAR (EDGE FUNCTION)
+                loadingText.innerText = "Leyendo con IA...";
+                const { data: funcData, error: funcError } = await _supabase.functions.invoke('scan-ticket', {
+                    body: { imageUrl: publicUrl, userId: USER_ID }
+                });
+
+                if (funcError) throw new Error("Fallo de conexión: " + funcError.message);
+                if (!funcData.success) throw new Error("La IA no pudo leer: " + funcData.error);
+
+                // 4. ÉXITO
+                showResult(funcData.ticket);
+
+            } catch (err) {
+                console.error(err);
+                showError("Ups: " + (err.message || "Error desconocido"));
+            }
+        }
+
+        // --- UTILIDAD DE COMPRESIÓN (La misma de antes) ---
+        const comprimirImagen = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 1024; 
+                        const scaleSize = MAX_WIDTH / img.width;
+                        if (scaleSize >= 1) { resolve(file); return; }
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob((blob) => {
+                            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                        }, 'image/jpeg', 0.8); 
+                    }
+                };
+            });
+        };
+    </script>
+</body>
+</html>
