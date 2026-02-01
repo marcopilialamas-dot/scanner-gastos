@@ -191,6 +191,7 @@
         }
 
         // --- PROCESO PRINCIPAL ---
+       // --- PROCESO PRINCIPAL (ACTUALIZADO) ---
         async function processFile(input) {
             if (input.files.length === 0) return;
             const file = input.files[0];
@@ -202,7 +203,7 @@
             const status = document.getElementById('scanStatus');
             
             preview.src = URL.createObjectURL(file);
-            container.classList.add('scanning'); // Activa el láser
+            container.classList.add('scanning'); 
 
             try {
                 // 1. Optimizar
@@ -225,12 +226,27 @@
 
                 if (funcErr || !funcData.success) throw new Error("Fallo en lectura inteligente");
 
-                // 4. Llenar Formulario de Edición
-                currentTicketId = funcData.ticket.id; // Guardamos ID para actualizar después
+                // ---------------------------------------------------------
+                // 4. LLENAR FORMULARIO (ACÁ ESTÁ LA MAGIA NUEVA ✨)
+                // ---------------------------------------------------------
+                currentTicketId = funcData.ticket.id; 
+
+                // Campos de Texto
                 document.getElementById('editComercio').value = funcData.ticket.comercio || "";
                 document.getElementById('editFecha').value = funcData.ticket.fecha_emision || "";
                 document.getElementById('editCuit').value = funcData.ticket.cuit || "";
-                document.getElementById('editTotal').value = funcData.ticket.monto_total || "";
+                
+                // Campos Nuevos (Dropdowns y Textos)
+                // Nota: Si la IA devuelve null, ponemos valores por defecto
+                document.getElementById('editTipo').value = funcData.ticket.tipo_comprobante || "Ticket"; 
+                document.getElementById('editNumero').value = funcData.ticket.numero_comprobante || "";
+                document.getElementById('editCategoria').value = funcData.ticket.categoria_sugerida || "";
+
+                // Campos Numéricos (Impuestos)
+                document.getElementById('editIva').value = funcData.ticket.importe_iva || 0;
+                document.getElementById('editIIBB').value = funcData.ticket.importe_iibb || 0;
+                document.getElementById('editTotal').value = funcData.ticket.monto_total || 0;
+                // ---------------------------------------------------------
 
                 // UI: Mostrar Resultado
                 container.classList.remove('scanning');
@@ -242,7 +258,6 @@
                 setTimeout(resetApp, 3000);
             }
         }
-
         // --- ACTUALIZAR DATOS ---
        async function confirmarYGuardar() {
             const btn = document.getElementById('btnSave');
@@ -343,5 +358,6 @@
 </body>
 
 </html>
+
 
 
