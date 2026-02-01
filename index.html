@@ -244,42 +244,52 @@
         }
 
         // --- ACTUALIZAR DATOS ---
-        async function confirmarYGuardar() {
+       async function confirmarYGuardar() {
             const btn = document.getElementById('btnSave');
             const originalText = btn.innerHTML;
             btn.innerHTML = `<div class="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Guardando...`;
             btn.disabled = true;
 
             try {
-                // Leemos los inputs (quizás el usuario corrigió algo)
+                // 1. Recopilar datos del formulario (NUEVOS CAMPOS INCLUIDOS)
                 const updates = {
                     comercio: document.getElementById('editComercio').value,
                     fecha_emision: document.getElementById('editFecha').value || null,
                     cuit: document.getElementById('editCuit').value,
+                    
+                    // Nuevos campos
+                    tipo_comprobante: document.getElementById('editTipo').value,
+                    numero_comprobante: document.getElementById('editNumero').value,
+                    categoria_sugerida: document.getElementById('editCategoria').value,
+                    
+                    // Números (importante usar parseFloat y || 0 por si está vacío)
+                    importe_iva: parseFloat(document.getElementById('editIva').value) || 0,
+                    importe_iibb: parseFloat(document.getElementById('editIIBB').value) || 0,
                     monto_total: parseFloat(document.getElementById('editTotal').value) || 0
                 };
 
-                // Actualizamos en Supabase
+                // 2. Enviar a Supabase
                 const { error } = await _supabase
                     .from('tickets')
                     .update(updates)
-                    .eq('id', currentTicketId); // Actualizamos SOLO este ticket
+                    .eq('id', currentTicketId); // Solo actualiza el ticket actual
 
                 if (error) throw error;
 
-                // Éxito
+                // 3. Éxito
                 btn.innerHTML = "¡Guardado!";
                 btn.classList.add('bg-green-500');
                 
-                // Efecto visual y reset
                 setTimeout(() => {
-                    alert("Ticket guardado y enviado a Excel ✅");
+                    alert("Ticket guardado correctamente ✅");
                     resetApp();
                 }, 500);
 
             } catch (err) {
-                showError("Error al guardar cambios: " + err.message);
+                console.error(err);
+                showError("Error al guardar: " + err.message);
                 btn.innerHTML = originalText;
+                btn.classList.remove('bg-green-500');
                 btn.disabled = false;
             }
         }
@@ -333,4 +343,5 @@
 </body>
 
 </html>
+
 
