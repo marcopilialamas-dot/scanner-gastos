@@ -3,253 +3,297 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner IA</title>
+    <title>Scanner Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        /* Animación de pulso para el scanner */
-        @keyframes scan {
-            0% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(200px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 0; }
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script> <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: white; }
+        
+        /* Animación del Scanner Láser */
+        .scanner-container { position: relative; overflow: hidden; border-radius: 12px; }
+        .laser-beam {
+            position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: #10b981; box-shadow: 0 0 15px #10b981;
+            animation: scanMove 2s infinite ease-in-out; display: none; z-index: 10;
         }
-        .scan-line {
-            width: 100%;
-            height: 2px;
-            background: #3B82F6;
-            box-shadow: 0 0 10px #3B82F6;
-            position: absolute;
-            animation: scan 2s infinite linear;
-            display: none;
+        @keyframes scanMove { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+        .scanning .laser-beam { display: block; }
+        .scanning img { opacity: 0.6; filter: grayscale(50%); }
+
+        /* Estilos de Inputs */
+        .input-field {
+            background: #1e293b; border: 1px solid #334155; color: white;
+            padding: 10px; rounded: 8px; width: 100%; border-radius: 8px;
+            font-size: 0.95rem; outline: none; transition: all 0.2s;
         }
-        .scanning .scan-line { display: block; }
+        .input-field:focus { border-color: #3b82f6; ring: 2px solid #3b82f6; }
     </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col relative overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden">
 
-    <div class="pt-8 pb-4 px-6 flex justify-between items-center z-10">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight">Gastos IA</h1>
-            <p class="text-slate-400 text-sm">Scanner Inteligente</p>
-        </div>
-        <div class="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-            <span class="text-xs font-bold text-blue-400">MP</span>
-        </div>
-    </div>
+    <header class="p-4 flex justify-between items-center bg-slate-900 border-b border-slate-800">
+        <h1 class="text-lg font-bold flex items-center gap-2">
+            <i data-lucide="scan-line" class="text-blue-500"></i> ScannerAI
+        </h1>
+        <div class="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">YO</div>
+    </header>
 
-    <div class="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
+    <main class="flex-1 overflow-y-auto p-4 relative">
         
-        <div id="startScreen" class="flex flex-col items-center w-full transition-all duration-500">
-            
-            <button onclick="triggerCamera()" class="group relative w-48 h-48 rounded-full bg-slate-800 border-4 border-slate-700 flex items-center justify-center shadow-2xl active:scale-95 transition-transform duration-200">
-                <div class="absolute inset-0 rounded-full bg-blue-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-                
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 text-blue-400 group-hover:text-blue-300 transition-colors">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.122 2.122 0 00-1.791-.98h-6.25a2.122 2.122 0 00-1.79.98L6.827 6.175z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                </svg>
-            </button>
-            
-            <p class="mt-8 text-slate-400 font-medium text-center">Tocá para escanear ticket</p>
-            
-            <button onclick="triggerGallery()" class="mt-4 text-sm text-slate-500 underline hover:text-slate-300">
-                o subir de la galería
-            </button>
-        </div>
-
-        <div id="loadingScreen" class="hidden w-full max-w-xs text-center scanning">
-            <div class="relative w-full h-64 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-6 flex items-center justify-center">
-                <div class="scan-line top-0"></div>
-                <img id="previewImg" class="w-full h-full object-cover opacity-50" />
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
+        <div id="view-home" class="h-full flex flex-col items-center justify-center space-y-8 transition-opacity duration-300">
+            <div class="text-center space-y-2">
+                <h2 class="text-2xl font-bold">Nuevo Gasto</h2>
+                <p class="text-slate-400 text-sm">Sacá una foto clara del ticket</p>
             </div>
-            <h2 class="text-xl font-bold text-white mb-2">Analizando...</h2>
-            <p id="loadingText" class="text-blue-400 text-sm font-mono">Comprimiendo imagen...</p>
+
+            <button onclick="openCamera()" class="relative group">
+                <div class="absolute inset-0 bg-blue-500 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <div class="relative w-24 h-24 rounded-full bg-blue-600 border-4 border-slate-900 flex items-center justify-center shadow-2xl active:scale-95 transition-transform">
+                    <i data-lucide="camera" class="w-10 h-10 text-white"></i>
+                </div>
+            </button>
+
+            <button onclick="openGallery()" class="text-sm text-slate-500 flex items-center gap-2 hover:text-white transition">
+                <i data-lucide="image"></i> Subir de galería
+            </button>
         </div>
 
-        <div id="resultScreen" class="hidden w-full max-w-sm">
-            <div class="bg-white text-slate-900 rounded-xl shadow-2xl overflow-hidden relative">
-                <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
-                    <span class="font-bold text-lg">✅ Éxito</span>
-                    <span class="text-blue-200 text-xs uppercase tracking-wider">Ticket Procesado</span>
-                </div>
-                
-                <div class="p-6 space-y-4">
-                    <div class="flex justify-between border-b border-gray-100 pb-2">
-                        <span class="text-gray-500 text-sm">Comercio</span>
-                        <span id="resComercio" class="font-bold text-gray-800 text-right w-1/2 break-words">...</span>
-                    </div>
-                    <div class="flex justify-between border-b border-gray-100 pb-2">
-                        <span class="text-gray-500 text-sm">Fecha</span>
-                        <span id="resFecha" class="font-mono text-gray-800">...</span>
-                    </div>
-                    <div class="flex justify-between border-b border-gray-100 pb-2">
-                        <span class="text-gray-500 text-sm">CUIT</span>
-                        <span id="resCuit" class="font-mono text-gray-800 text-xs">...</span>
-                    </div>
-                    
-                    <div class="pt-2 flex justify-between items-end">
-                        <span class="text-gray-500 font-medium">Total</span>
-                        <span id="resMonto" class="text-3xl font-bold text-green-600">...</span>
-                    </div>
-                </div>
-
-                <div class="bg-gray-50 p-4 flex gap-3">
-                    <button onclick="resetApp()" class="flex-1 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-100 transition shadow-sm">
-                        Escanear Otro
-                    </button>
-                    <button class="flex-1 bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-black transition shadow-sm flex justify-center items-center gap-2">
-                       <span>Guardado</span>
-                       <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    </button>
+        <div id="view-scan" class="hidden h-full flex flex-col items-center justify-center">
+            <div class="w-full max-w-sm scanner-container bg-black aspect-[3/4] relative mb-4 border border-slate-700">
+                <div class="laser-beam"></div>
+                <img id="previewImg" class="w-full h-full object-contain" />
+                <div class="absolute bottom-4 left-0 right-0 text-center">
+                    <span id="scanStatus" class="bg-black/50 px-3 py-1 rounded-full text-xs font-mono text-green-400 backdrop-blur-sm">
+                        Inicializando...
+                    </span>
                 </div>
             </div>
         </div>
 
-        <div id="errorMsg" class="hidden mt-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg text-sm text-center max-w-sm">
+        <div id="view-result" class="hidden pb-20">
+            <div class="bg-slate-800 rounded-xl p-5 shadow-lg border border-slate-700 space-y-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-slate-200">Verificar Datos</h3>
+                    <span class="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded">IA Finalizada</span>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 ml-1">Comercio</label>
+                    <input type="text" id="editComercio" class="input-field" placeholder="Nombre del local">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400 ml-1">Fecha</label>
+                        <input type="date" id="editFecha" class="input-field">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 ml-1">CUIT</label>
+                        <input type="text" id="editCuit" class="input-field" placeholder="20-...">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 ml-1">Total ($)</label>
+                    <input type="number" step="0.01" id="editTotal" class="input-field text-xl font-bold text-green-400" placeholder="0.00">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button onclick="resetApp()" class="flex-1 py-3 rounded-lg border border-slate-600 text-slate-300 font-medium hover:bg-slate-700">
+                        Descartar
+                    </button>
+                    <button onclick="confirmarYGuardar()" id="btnSave" class="flex-1 py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-lg shadow-green-900/20 flex justify-center items-center gap-2">
+                        <span>Confirmar</span> <i data-lucide="check" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-    </div>
+        <div id="errorToast" class="fixed top-4 left-4 right-4 bg-red-600 text-white p-3 rounded-lg shadow-xl transform -translate-y-20 transition-transform duration-300 z-50 text-sm text-center">
+            Error desconocido
+        </div>
 
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(this)">
-    <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="handleFileSelect(this)">
+    </main>
+
+    <nav class="h-16 bg-slate-900 border-t border-slate-800 flex justify-around items-center text-xs text-slate-500">
+        <button onclick="switchTab('scan')" class="flex flex-col items-center gap-1 text-blue-500">
+            <i data-lucide="scan-line"></i> Escanear
+        </button>
+        <button class="flex flex-col items-center gap-1 hover:text-slate-300">
+            <i data-lucide="history"></i> Historial
+        </button>
+        <button class="flex flex-col items-center gap-1 hover:text-slate-300">
+            <i data-lucide="settings"></i> Ajustes
+        </button>
+    </nav>
+
+    <input type="file" id="camInput" accept="image/*" capture="environment" class="hidden" onchange="processFile(this)">
+    <input type="file" id="galInput" accept="image/*" class="hidden" onchange="processFile(this)">
 
     <script>
-        // --- CONFIGURACIÓN ---
+        // --- CONFIG ---
         const SUPABASE_URL = 'https://thfrcokohzbkcwdsryss.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoZnJjb2tvaHpia2N3ZHNyeXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4ODc2OTIsImV4cCI6MjA4NTQ2MzY5Mn0.PzudghLp2lTdvFwX1y_Q4r8U_gA4hE7k040LYr-WVx8'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoZnJjb2tvaHpia2N3ZHNyeXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4ODc2OTIsImV4cCI6MjA4NTQ2MzY5Mn0.PzudghLp2lTdvFwX1y_Q4r8U_gA4hE7k040LYr-WVx8';
         const USER_ID = "76e024c1-bd8f-4c0e-bfa0-132df6bd8e91"; 
-        
+
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let currentTicketId = null; // Para saber qué ticket estamos editando
 
-        // --- DOM ELEMENTS ---
-        const startScreen = document.getElementById('startScreen');
-        const loadingScreen = document.getElementById('loadingScreen');
-        const resultScreen = document.getElementById('resultScreen');
-        const errorMsg = document.getElementById('errorMsg');
-        const loadingText = document.getElementById('loadingText');
-        const previewImg = document.getElementById('previewImg');
+        // Init Iconos
+        lucide.createIcons();
 
-        // --- FUNCIONES UI ---
-        function triggerCamera() {
-            document.getElementById('cameraInput').click();
+        // --- NAVEGACIÓN ---
+        function openCamera() { document.getElementById('camInput').click(); }
+        function openGallery() { document.getElementById('galInput').click(); }
+        
+        function switchView(viewId) {
+            ['view-home', 'view-scan', 'view-result'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
         }
 
-        function triggerGallery() {
-            document.getElementById('galleryInput').click();
-        }
-
-        function showLoading(file) {
-            startScreen.classList.add('hidden');
-            resultScreen.classList.add('hidden');
-            errorMsg.classList.add('hidden');
-            loadingScreen.classList.remove('hidden');
-            
-            // Mostrar preview
-            const reader = new FileReader();
-            reader.onload = function(e) { previewImg.src = e.target.result; }
-            reader.readAsDataURL(file);
-        }
-
-        function showResult(ticket) {
-            loadingScreen.classList.add('hidden');
-            resultScreen.classList.remove('hidden');
-
-            // Formatear datos
-            document.getElementById('resComercio').innerText = ticket.comercio || "Desconocido";
-            document.getElementById('resFecha').innerText = ticket.fecha_emision || "N/A";
-            document.getElementById('resCuit').innerText = ticket.cuit || "-";
-            
-            const monto = ticket.monto_total ? ticket.monto_total.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' }) : "$0.00";
-            document.getElementById('resMonto').innerText = monto;
-        }
-
-        function showError(msg) {
-            loadingScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-            errorMsg.innerText = msg;
-            errorMsg.classList.remove('hidden');
-        }
-
-        function resetApp() {
-            resultScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-            document.getElementById('cameraInput').value = ""; // Reset inputs
-            document.getElementById('galleryInput').value = "";
-        }
-
-        // --- LÓGICA PRINCIPAL ---
-        async function handleFileSelect(input) {
+        // --- PROCESO PRINCIPAL ---
+        async function processFile(input) {
             if (input.files.length === 0) return;
+            const file = input.files[0];
             
-            const originalFile = input.files[0];
-            showLoading(originalFile);
+            // UI: Mostrar Scanner
+            switchView('view-scan');
+            const preview = document.getElementById('previewImg');
+            const container = document.querySelector('.scanner-container');
+            const status = document.getElementById('scanStatus');
+            
+            preview.src = URL.createObjectURL(file);
+            container.classList.add('scanning'); // Activa el láser
 
             try {
-                // 1. COMPRIMIR
-                loadingText.innerText = "Optimizando foto...";
-                const compressedFile = await comprimirImagen(originalFile);
+                // 1. Optimizar
+                status.innerText = "Optimizando imagen...";
+                const compressedFile = await comprimirImagen(file);
 
-                // 2. SUBIR
-                loadingText.innerText = "Subiendo a la nube...";
+                // 2. Subir
+                status.innerText = "Subiendo a la nube...";
                 const fileName = `scan_${Date.now()}.jpg`;
-                const { error: uploadError } = await _supabase.storage
-                    .from('comprobantes')
-                    .upload(fileName, compressedFile);
+                const { error: upErr } = await _supabase.storage.from('comprobantes').upload(fileName, compressedFile);
+                if (upErr) throw upErr;
 
-                if (uploadError) throw new Error("Error de subida: " + uploadError.message);
+                const { data: { publicUrl } } = _supabase.storage.from('comprobantes').getPublicUrl(fileName);
 
-                const { data: { publicUrl } } = _supabase.storage
-                    .from('comprobantes')
-                    .getPublicUrl(fileName);
-
-                // 3. PROCESAR (EDGE FUNCTION)
-                loadingText.innerText = "Leyendo con IA...";
-                const { data: funcData, error: funcError } = await _supabase.functions.invoke('scan-ticket', {
+                // 3. IA (Edge Function)
+                status.innerText = "Analizando con IA...";
+                const { data: funcData, error: funcErr } = await _supabase.functions.invoke('scan-ticket', {
                     body: { imageUrl: publicUrl, userId: USER_ID }
                 });
 
-                if (funcError) throw new Error("Fallo de conexión: " + funcError.message);
-                if (!funcData.success) throw new Error("La IA no pudo leer: " + funcData.error);
+                if (funcErr || !funcData.success) throw new Error("Fallo en lectura inteligente");
 
-                // 4. ÉXITO
-                showResult(funcData.ticket);
+                // 4. Llenar Formulario de Edición
+                currentTicketId = funcData.ticket.id; // Guardamos ID para actualizar después
+                document.getElementById('editComercio').value = funcData.ticket.comercio || "";
+                document.getElementById('editFecha').value = funcData.ticket.fecha_emision || "";
+                document.getElementById('editCuit').value = funcData.ticket.cuit || "";
+                document.getElementById('editTotal').value = funcData.ticket.monto_total || "";
+
+                // UI: Mostrar Resultado
+                container.classList.remove('scanning');
+                switchView('view-result');
 
             } catch (err) {
                 console.error(err);
-                showError("Ups: " + (err.message || "Error desconocido"));
+                showError("Ocurrió un error: " + err.message);
+                setTimeout(resetApp, 3000);
             }
         }
 
-        // --- UTILIDAD DE COMPRESIÓN (La misma de antes) ---
+        // --- ACTUALIZAR DATOS ---
+        async function confirmarYGuardar() {
+            const btn = document.getElementById('btnSave');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<div class="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent"></div> Guardando...`;
+            btn.disabled = true;
+
+            try {
+                // Leemos los inputs (quizás el usuario corrigió algo)
+                const updates = {
+                    comercio: document.getElementById('editComercio').value,
+                    fecha_emision: document.getElementById('editFecha').value || null,
+                    cuit: document.getElementById('editCuit').value,
+                    monto_total: parseFloat(document.getElementById('editTotal').value) || 0
+                };
+
+                // Actualizamos en Supabase
+                const { error } = await _supabase
+                    .from('tickets')
+                    .update(updates)
+                    .eq('id', currentTicketId); // Actualizamos SOLO este ticket
+
+                if (error) throw error;
+
+                // Éxito
+                btn.innerHTML = "¡Guardado!";
+                btn.classList.add('bg-green-500');
+                
+                // Efecto visual y reset
+                setTimeout(() => {
+                    alert("Ticket guardado y enviado a Excel ✅");
+                    resetApp();
+                }, 500);
+
+            } catch (err) {
+                showError("Error al guardar cambios: " + err.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function resetApp() {
+            document.getElementById('camInput').value = "";
+            document.getElementById('galInput').value = "";
+            document.getElementById('btnSave').innerHTML = `<span>Confirmar</span> <i data-lucide="check" class="w-4 h-4"></i>`;
+            document.getElementById('btnSave').disabled = false;
+            switchView('view-home');
+        }
+
+        function showError(msg) {
+            const toast = document.getElementById('errorToast');
+            toast.innerText = msg;
+            toast.style.transform = "translateY(0)";
+            setTimeout(() => { toast.style.transform = "translateY(-100px)"; }, 4000);
+        }
+
+        function switchTab(tab) {
+            if(tab === 'scan') resetApp();
+            // Acá podrías agregar lógica para las otras tabs
+        }
+
+        // --- COMPRESOR (Mismo de antes) ---
         const comprimirImagen = (file) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = (event) => {
+                reader.onload = (e) => {
                     const img = new Image();
-                    img.src = event.target.result;
+                    img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1024; 
-                        const scaleSize = MAX_WIDTH / img.width;
-                        if (scaleSize >= 1) { resolve(file); return; }
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
+                        const MAX = 1024;
+                        const scale = MAX / img.width;
+                        if (scale >= 1) { resolve(file); return; }
+                        canvas.width = MAX;
+                        canvas.height = img.height * scale;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        canvas.toBlob((blob) => {
-                            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-                        }, 'image/jpeg', 0.8); 
+                        canvas.toBlob(b => resolve(new File([b], file.name, {type:'image/jpeg'})), 'image/jpeg', 0.8);
                     }
                 };
             });
         };
     </script>
 </body>
+</html>
+    </script>
+</body>
+
 </html>
